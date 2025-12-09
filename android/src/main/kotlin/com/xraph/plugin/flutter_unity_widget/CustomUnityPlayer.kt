@@ -6,6 +6,7 @@ import android.content.res.Configuration
 import android.util.Log
 import android.view.InputDevice
 import android.view.MotionEvent
+import java.lang.reflect.Method
 import com.unity3d.player.IUnityPlayerLifecycleEvents
 import com.unity3d.player.UnityPlayer
 
@@ -39,6 +40,22 @@ class CustomUnityPlayer(context: Activity, upl: IUnityPlayerLifecycleEvents?) : 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         ev.source = InputDevice.SOURCE_TOUCHSCREEN
         return super.dispatchTouchEvent(ev)
+    }
+
+    /**
+     * Unity 2021.3.31+ / 2022.3.10+ call a private
+     * UnityPlayer.hidePreservedContent(), which is missing here and
+     * crashes on Android <= 8. Proxy the call via reflection.
+     */
+    fun hidePreservedContent() {
+        Log.i(LOG_TAG, "hidePreservedContent (delegated via reflection)")
+
+        UnityPlayer::class.java.declaredMethods
+            .find { it.name == "hidePreservedContent" }
+            ?.let {
+                it.isAccessible = true
+                it.invoke(this)
+            }
     }
 
     @SuppressLint("ClickableViewAccessibility")
